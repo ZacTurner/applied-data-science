@@ -1,10 +1,11 @@
 import sys
-import csv
-from datetime import datetime, timedelta
-from itertools import chain
-from pymongo import MongoClient
-import numpy as np
 import os
+import csv
+import json
+from datetime import datetime, timedelta
+from pymongo import MongoClient
+from bson import json_util
+import numpy as np
 
 rooms = [
     "dining_room",
@@ -163,10 +164,22 @@ def gen_dataset_2(cleansed):
                 ])
 
 
+def gen_json(cleansed):
+    def json_serial(obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        else:
+            return str(obj)
+
+    with open("data/all.json", "w+") as file:
+        json.dump(cleansed, file, default=json_serial)
+
+
 def gen_datasets():
     cleansed = cleansed_data()
     gen_dataset_1(cleansed)
     gen_dataset_2(cleansed)
+    gen_json(cleansed)
 
 
 if __name__ == "__main__":
