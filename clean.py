@@ -1,13 +1,14 @@
+"""Generate cleansed datasets"""
+
 import sys
 import os
 import csv
 import json
 from datetime import datetime, timedelta
 from pymongo import MongoClient
-from bson import json_util
 import numpy as np
 
-rooms = [
+ROOMS = [
     "dining_room",
     "kitchen",
     "bathroom",
@@ -19,7 +20,12 @@ rooms = [
 
 
 def cleansed_data():
-    """Connect to the database and cleanse and filter the data"""
+    """Connect to the database and cleanse and filter the data
+
+    Returns:
+        dict: the cleansed dataset
+
+    """
 
     client = MongoClient(
         os.environ["ADS_URL"],
@@ -71,7 +77,7 @@ def cleansed_data():
 
             if output:
                 output["time"] = doc["bt"]
-                output["room"] = rooms[room]
+                output["room"] = ROOMS[room]
 
                 output["window_open"] = False
                 output["window_open_time"] = 0
@@ -88,6 +94,14 @@ def cleansed_data():
 
 
 def gen_dataset_1(cleansed):
+    """Generate the first dataset, with CSVs for temperature and humidity
+    for all rooms
+
+    Args:
+        cleansed (dict): The full cleansed dataset
+
+    """
+
     temps = []
     hums = []
 
@@ -127,8 +141,15 @@ def gen_dataset_1(cleansed):
 
 
 def gen_dataset_2(cleansed):
-    temps = {room: [] for room in rooms}
-    hums = {room: [] for room in rooms}
+    """Generate the second dataset, with CSVs split up into rooms
+
+    Args:
+        cleansed (dict): the full cleansed dataset
+
+    """
+
+    temps = {room: [] for room in ROOMS}
+    hums = {room: [] for room in ROOMS}
 
     for record in cleansed:
         if "temperature" in record:
@@ -136,7 +157,7 @@ def gen_dataset_2(cleansed):
         if "humidity" in record:
             hums[record["room"]].append(record)
 
-    for room in rooms:
+    for room in ROOMS:
         with open(f"data/dataset_2/{room}/temperature.csv", "w+") as file:
             writer = csv.writer(file)
             writer.writerow([
@@ -165,17 +186,36 @@ def gen_dataset_2(cleansed):
 
 
 def gen_json(cleansed):
+    """Generate the full cleansed dataset as JSON and save
+
+    Args:
+        cleansed (dict): the full cleansed dataset
+
+    """
+
     def json_serial(obj):
+        """ Converts date objects to a JSON acceptable format
+
+        Args:
+            obj (object): the incompatible object
+
+        Returns:
+            str: the object in a JSON-happy format
+
+        """
+
         if isinstance(obj, datetime):
             return obj.isoformat()
-        else:
-            return str(obj)
+
+        return str(obj)
 
     with open("data/all.json", "w+") as file:
         json.dump(cleansed, file, default=json_serial)
 
 
 def gen_datasets():
+    """Generate and save all of the cleansed datasets"""
+
     cleansed = cleansed_data()
     gen_dataset_1(cleansed)
     gen_dataset_2(cleansed)
