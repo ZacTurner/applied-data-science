@@ -18,6 +18,17 @@ ROOMS = [
     "living_room"
 ]
 
+START = datetime(2018, 3, 21, 14)
+
+OPEN_TIMES = {
+    6: datetime(2018, 3, 21, 15, 15),
+    4: datetime(2018, 3, 21, 15, 17),
+    1: datetime(2018, 3, 21, 15, 41),
+    2: datetime(2018, 3, 21, 16, 21)
+}
+
+CLOSE_TIME = datetime(2018, 3, 21, 16, 45)
+
 
 def cleansed_data():
     """Connect to the database and cleanse and filter the data
@@ -43,17 +54,6 @@ def cleansed_data():
         "fd00::212:4b00:0:83": 5,
         "fd00::212:4b00:0:80": 6
     }
-
-    day = datetime(2018, 3, 21, 15)
-
-    open_times = {
-        6: day + timedelta(minutes=15),
-        4: day + timedelta(minutes=17),
-        1: day + timedelta(minutes=41),
-        2: day + timedelta(hours=1, minutes=21)
-    }
-
-    close_time = datetime(2018, 3, 21, 16, 45)
 
     database = client.project
     collection = database.env_original
@@ -82,15 +82,16 @@ def cleansed_data():
                 output["window_open"] = False
                 output["window_open_time"] = 0
 
-                if room in open_times:
-                    open_time = open_times[room]
-                    if open_time <= doc["bt"] <= close_time:
+                if room in OPEN_TIMES:
+                    open_time = OPEN_TIMES[room]
+                    if open_time <= doc["bt"] < CLOSE_TIME:
                         output["window_open"] = True
                         output["window_open_time"] = doc["bt"] - open_time
 
                 outputs.append(output)
 
-    return outputs
+    sorted_outputs = sorted(outputs, key=lambda rec: rec["time"])
+    return sorted_outputs
 
 
 def gen_dataset_1(cleansed):
@@ -185,6 +186,79 @@ def gen_dataset_2(cleansed):
                 ])
 
 
+def gen_dataset_3(cleansed):
+    """Generate the third dataset, with CSVs for temperature and humidity
+    grouped into thirty second bunches
+
+    Args:
+        cleansed (dict): the full cleansed dataset
+
+    """
+
+    start = datetime(2018, 3, 21, 14)
+    end = datetime(2018, 3, 21, 18)
+    delta = timedelta(seconds=30)
+
+    rows = []
+
+    time = start
+    temp_group = {room: [] for room in ROOMS}
+    hum_group = {room: [] for room in ROOMS}
+
+    for rec in cleansed:
+        room = rec["room"]
+
+        while time < end and not (time <= rec["time"] < time + delta):
+            for r in ROOMS:
+                if temp_group[r] and hum_group[r]:
+                    row = {}
+                    row["time"] = time
+                    row["room"] = r
+
+                    row["window_open"] = False
+                    row["window_open_time"] = 0
+
+                    if ROOMS.index(r) in OPEN_TIMES:
+                        open_time = OPEN_TIMES[ROOMS.index(r)]
+                        if open_time <= time < CLOSE_TIME:
+                            row["window_open"] = True
+                            row["window_open_time"] = time - open_time
+
+                    row["temperature"] = np.mean(temp_group[r])
+                    row["humidity"] = np.mean(hum_group[r])
+                    rows.append(row)
+
+            time = time + delta
+            temp_group = {room: [] for room in ROOMS}
+            hum_group = {room: [] for room in ROOMS}
+
+        if "temperature" in rec:
+            temp_group[room].append(rec["temperature"])
+        if "humidity" in rec:
+            hum_group[room].append(rec["humidity"])
+
+    with open("data/dataset_3/data.csv", "w+") as file:
+        writer = csv.writer(file)
+        writer.writerow([
+            "time",
+            "room",
+            "temperature",
+            "humidity",
+            "window_open",
+            "window_open_time"
+        ])
+
+        for row in rows:
+            writer.writerow([
+                row["time"],
+                row["room"],
+                row["temperature"],
+                row["humidity"],
+                row["window_open"],
+                row["window_open_time"]
+            ])
+
+
 def gen_json(cleansed):
     """Generate the full cleansed dataset as JSON and save
 
@@ -219,6 +293,7 @@ def gen_datasets():
     cleansed = cleansed_data()
     gen_dataset_1(cleansed)
     gen_dataset_2(cleansed)
+    gen_dataset_3(cleansed)
     gen_json(cleansed)
 
 
