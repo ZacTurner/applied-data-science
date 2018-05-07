@@ -11,6 +11,6 @@ Structure:
 2) /visualisation: contains the code used for creating the visualisations [click here](https://github.com/ZacTurner/applied-data-science/tree/master/visualisation#data-visualization) for further information.
   The visualisation is available at: [ads-dv1](http://129.158.81.250:5006/ads-dv1) & [ads-dv2](http://129.158.81.250:5006/ads-dv2)
 
-3) /prediction: contains the code used to build the classifier and for productionising the model. Please [click here](https://github.com/ZacTurner/applied-data-science/tree/master/prediction#prediction) for further information.
+3) /prediction: contains the code used to build the classifier and for productionising the model. Please [click here](https://github.com/ZacTurner/applied-data-science/blob/master/prediction/prod/README.md#prediction) for further information.
 
 4) clean.py - is the python code used for cleaning the data.
