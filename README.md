@@ -2,6 +2,7 @@
 This repository contains the data and the code towards the coursework for Applied Data science unit at University of Bristol (UK).
 
 This is by the group SH2 comprising of Cheng Chun, Franklin Martinez, Kamal Pandala, Keshav Goel, Zac Turner
+
 Email: {cc17534, fm17982, kp17860, kg17822, zac.turner.2014}@bristol.ac.uk
 
 Structure:
